@@ -62,7 +62,16 @@ namespace MarsOffice.Tvg.VideoDownloader
 
                 var fileNameSplit = selectedBlob.StorageUri.PrimaryUri.LocalPath.ToString().Split("/");
                 var fileName = fileNameSplit.Last();
-                var filePath = "video/" + fileName;
+
+                var sas = cloudStorageAccount.GetSharedAccessSignature(new SharedAccessAccountPolicy { 
+                    Permissions = SharedAccessAccountPermissions.Read,
+                    Protocols = SharedAccessProtocol.HttpsOnly,
+                    SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddHours(1),
+                    ResourceTypes = SharedAccessAccountResourceTypes.Object,
+                    Services = SharedAccessAccountServices.Blob,
+                    SharedAccessStartTime = DateTimeOffset.UtcNow
+                });
+
 
                 await videoBackgroundResultQueue.AddAsync(new VideoBackgroundResult
                 {
@@ -71,7 +80,7 @@ namespace MarsOffice.Tvg.VideoDownloader
                     JobId = request.JobId,
                     UserEmail = request.UserEmail,
                     UserId = request.UserId,
-                    FileLink = filePath,
+                    FileLink = selectedBlob.Uri.ToString() + sas,
                     Category = request.Category,
                     LanguageCode = request.LanguageCode,
                     FileName = fileName
