@@ -23,7 +23,7 @@ namespace MarsOffice.Tvg.VideoDownloader
 
         [FunctionName("RequestVideoBackgroundConsumer")]
         public async Task Run(
-            [QueueTrigger("request-videobackground", Connection = "localsaconnectionstring")]RequestVideoBackground request, 
+            [QueueTrigger("request-videobackground", Connection = "localsaconnectionstring")] RequestVideoBackground request,
             [Queue("videobackground-result", Connection = "localsaconnectionstring")] IAsyncCollector<VideoBackgroundResult> videoBackgroundResultQueue,
             ILogger log)
         {
@@ -62,16 +62,7 @@ namespace MarsOffice.Tvg.VideoDownloader
 
                 var fileNameSplit = selectedBlob.StorageUri.PrimaryUri.LocalPath.ToString().Split("/");
                 var fileName = fileNameSplit.Last();
-
-                var sas = cloudStorageAccount.GetSharedAccessSignature(new SharedAccessAccountPolicy { 
-                    Permissions = SharedAccessAccountPermissions.Read,
-                    Protocols = SharedAccessProtocol.HttpsOnly,
-                    SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddHours(1),
-                    ResourceTypes = SharedAccessAccountResourceTypes.Object,
-                    Services = SharedAccessAccountServices.Blob,
-                    SharedAccessStartTime = DateTimeOffset.UtcNow
-                });
-
+                var filePath = "video/" + fileName;
 
                 await videoBackgroundResultQueue.AddAsync(new VideoBackgroundResult
                 {
@@ -80,7 +71,7 @@ namespace MarsOffice.Tvg.VideoDownloader
                     JobId = request.JobId,
                     UserEmail = request.UserEmail,
                     UserId = request.UserId,
-                    FileLink = selectedBlob.Uri.ToString() + sas,
+                    FileLink = filePath,
                     Category = request.Category,
                     LanguageCode = request.LanguageCode,
                     FileName = fileName
