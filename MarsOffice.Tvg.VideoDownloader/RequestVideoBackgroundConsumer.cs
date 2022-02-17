@@ -92,6 +92,7 @@ namespace MarsOffice.Tvg.VideoDownloader
                     LanguageCode = request.LanguageCode
                 });
                 await videoBackgroundResultQueue.FlushAsync();
+                throw;
             }
         }
     }
