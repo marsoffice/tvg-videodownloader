@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MarsOffice.Tvg.VideoDownloader.Abstractions;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue.Protocol;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
@@ -23,10 +24,16 @@ namespace MarsOffice.Tvg.VideoDownloader
 
         [FunctionName("RequestVideoBackgroundConsumer")]
         public async Task Run(
-            [QueueTrigger("request-videobackground", Connection = "localsaconnectionstring")] RequestVideoBackground request,
+            [QueueTrigger("request-videobackground", Connection = "localsaconnectionstring")] QueueMessage message,
             [Queue("videobackground-result", Connection = "localsaconnectionstring")] IAsyncCollector<VideoBackgroundResult> videoBackgroundResultQueue,
             ILogger log)
         {
+            var request = Newtonsoft.Json.JsonConvert.DeserializeObject<RequestVideoBackground>(message.Text,
+                    new Newtonsoft.Json.JsonSerializerSettings
+                    {
+                        ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+                        NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                    });
             try
             {
                 var cloudStorageAccount = CloudStorageAccount.Parse(_config["localsaconnectionstring"]);
@@ -80,18 +87,22 @@ namespace MarsOffice.Tvg.VideoDownloader
             }
             catch (Exception e)
             {
-                await videoBackgroundResultQueue.AddAsync(new VideoBackgroundResult
+                log.LogError(e, "Function threw an error");
+                if (message.DequeueCount >= 5)
                 {
-                    VideoId = request.VideoId,
-                    Success = false,
-                    Error = e.Message,
-                    JobId = request.JobId,
-                    UserEmail = request.UserEmail,
-                    UserId = request.UserId,
-                    Category = request.Category,
-                    LanguageCode = request.LanguageCode
-                });
-                await videoBackgroundResultQueue.FlushAsync();
+                    await videoBackgroundResultQueue.AddAsync(new VideoBackgroundResult
+                    {
+                        VideoId = request.VideoId,
+                        Success = false,
+                        Error = "VideoDownloaderService: " + e.Message,
+                        JobId = request.JobId,
+                        UserEmail = request.UserEmail,
+                        UserId = request.UserId,
+                        Category = request.Category,
+                        LanguageCode = request.LanguageCode
+                    });
+                    await videoBackgroundResultQueue.FlushAsync();
+                }
                 throw;
             }
         }
