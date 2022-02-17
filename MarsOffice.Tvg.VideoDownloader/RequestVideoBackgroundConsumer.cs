@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using MarsOffice.Tvg.VideoDownloader.Abstractions;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue.Protocol;
+using Microsoft.Azure.Storage.Queue;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
@@ -24,11 +24,11 @@ namespace MarsOffice.Tvg.VideoDownloader
 
         [FunctionName("RequestVideoBackgroundConsumer")]
         public async Task Run(
-            [QueueTrigger("request-videobackground", Connection = "localsaconnectionstring")] QueueMessage message,
+            [QueueTrigger("request-videobackground", Connection = "localsaconnectionstring")] CloudQueueMessage message,
             [Queue("videobackground-result", Connection = "localsaconnectionstring")] IAsyncCollector<VideoBackgroundResult> videoBackgroundResultQueue,
             ILogger log)
         {
-            var request = Newtonsoft.Json.JsonConvert.DeserializeObject<RequestVideoBackground>(message.Text,
+            var request = Newtonsoft.Json.JsonConvert.DeserializeObject<RequestVideoBackground>(message.AsString,
                     new Newtonsoft.Json.JsonSerializerSettings
                     {
                         ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
